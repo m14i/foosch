@@ -3,11 +3,15 @@ define(['jquery', 'jqueryws'], function ($) {
         initialize: function () {
 
             var txtUser = $('#txtUser');
+            var txtChat = $('#txtChat');
+
             var btnJoin = $('#btnJoin');
             var btnLogin = $('#btnLogin');
             var btnLeave = $('#btnLeave');
-            var content = $('#content');
 
+            var content = $('#content');
+            var chat = $('#chat');
+           
             var ws = $.websocket("ws://46.226.154.239:8080/websocket", {
                 events: {
                     error: function (e) {
@@ -21,6 +25,9 @@ define(['jquery', 'jqueryws'], function ($) {
                     },
                     play: function (e) {
                         content.append("play: " + e.data.join() + "\n");
+                    },
+                    say: function (e) {
+                        chat.prepend(e.data + "\n");
                     },
                     leave: function (e) {
                         content.append("leave: " + e.data + "\n");
@@ -38,6 +45,13 @@ define(['jquery', 'jqueryws'], function ($) {
 
             btnLogin.bind('click', function (e) {
                 ws.send('login', txtUser.val());
+            });
+
+            txtChat.bind('keypress', function (e) {
+                if (e.keyCode == 13) {
+                    ws.send('say', txtChat.val());
+                    txtChat.val("");
+                }        
             });
         }
     }

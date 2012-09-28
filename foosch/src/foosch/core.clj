@@ -6,6 +6,8 @@
 
 (def connections (atom #{}))
 (def arena (atom #{}))
+(def transcript (atom '()))
+(def transcript-size 10)
 
 
 (defn packet
@@ -28,7 +30,7 @@
     (if (arena-full? @arena)
       (let [players (take 4 @arena)
             names   (map #(.data % "user") players)]
-        (swap! arena disj players)
+        (swap! arena #(apply disj %1 %2) players)
         (doseq [c players]
           (.send c (packet "play" names))))
       (doseq [c @arena]
@@ -52,8 +54,23 @@
   (if-not (some #(when-let [n (.data % "user")] (= user n)) @connections)
     (do
       (.data conn "user" user)
-      (.send conn (packet "login" "ok")))
+      (.send conn (packet "login" "ok"))
+      (println @transcript)
+      (doseq [line (reverse (take transcript-size @transcript))]
+        (.send conn (packet "say" line))))
     (.send conn (packet "login" "name already in use"))))
+
+
+(defn say
+  "Broadcast chat message to all who are logged in"
+  [conn conns msg]
+  (println "say")
+  (when-let [user (.data conn "user")]
+    (let [users (filter #(.data % "user") @connections)
+          line (str user ": " msg)]
+      (swap! transcript #(conj (take transcript-size %1) %2) line)
+      (doseq [u users]
+        (.send u (packet "say" line))))))
 
 
 (defn bad-type
@@ -69,6 +86,7 @@
                   "join"   join
                   "login"  login
                   "leave"  leave
+                  "say"    say
                   :else    bad-type)]
     (handler conn @connections (:data msg))))
 
