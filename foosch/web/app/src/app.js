@@ -11,26 +11,57 @@ define(['jquery', 'jqueryws'], function ($) {
 
             var content = $('#content');
             var chat = $('#chat');
+
+            function stateStart() {
+                btnLogin.show();
+                btnJoin.hide();
+                btnLeave.hide();
+                txtChat.hide();
+                chat.hide();
+            }
+
+            function stateLoggedIn() {
+                btnJoin.show();
+                btnLeave.hide();
+                btnLogin.hide();
+                txtChat.show();
+                txtUser.hide();
+                chat.show();
+            }
+
+            function stateJoined() {
+                btnLogin.hide();
+                btnLeave.show();
+                btnJoin.hide();
+                txtChat.show();
+                txtUser.hide();
+                chat.show();
+            }
+                
+            stateStart();
            
-            var ws = $.websocket("ws://46.226.154.239:8080/websocket", {
+            var ws = $.websocket("ws://localhost:8080/websocket", {
                 events: {
                     error: function (e) {
-                        content.append("error: " + e.data + "\n");
+                        console.log("error: " + e.data);
                     },
                     login: function (e) {
-                        content.append("login: " + e.data + "\n");
+                        console.log("login: " + e.data);
+                        stateLoggedIn();
                     },
                     join: function (e) {
-                        content.append("join: " + e.data + "\n");
+                        console.log("join: " + e.data);
+                        stateJoined();
                     },
                     play: function (e) {
-                        content.append("play: " + e.data.join() + "\n");
+                        alert("Time to play " + e.data.join() + "!");
                     },
                     say: function (e) {
                         chat.prepend(e.data + "\n");
                     },
                     leave: function (e) {
-                        content.append("leave: " + e.data + "\n");
+                        console.log("leave: " + e.data);
+                        stateLoggedIn();
                     }
                 }
             });
