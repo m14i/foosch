@@ -5,7 +5,9 @@
 
 
 (def connections (atom #{}))
+(def users (atom #{}))
 (def arena (atom #{}))
+
 (def transcript (atom '()))
 (def transcript-size 10)
 
@@ -20,62 +22,76 @@
   (< 3 (count arena)))
 
 
+(defn get-data
+  [key conn]
+  (.data conn (name key)))
+
+(defn set-data
+  [key val conn]
+  (.data conn (name key) val))
+
+
 (defn join
   "Add user to the 'arena' and notify others in the arena that a new user has joined."
-  [conn conns _]
-  (println "join")
-  (println "arena" @arena)
-  (when-let [user (.data conn "user")]  ;; user must be logged in to join
+  [conn _]
+  (when (contains? @users conn)  ;; user must be logged in to join
     (swap! arena conj conn)
     (if (arena-full? @arena)
       (let [players (take 4 @arena)
-            names   (map #(.data % "user") players)]
+            names   (map (partial get-data :user) players)]
         (swap! arena #(apply disj %1 %2) players)
         (doseq [c players]
           (.send c (packet "play" names))))
-      (doseq [c @arena]
-        (.send c (packet "join" user))))))
+      (let [names (map (partial get-data :user) @arena)]
+        (.send conn (packet "join" "ok"))
+        (doseq [c @arena]
+          (.send c (packet "arena" names)))))))
 
 
 (defn leave
   "Remove user from 'arena' and notify others that a user has left."
-  [conn conns _]
+  [conn _]
   (when (contains? @arena conn)
-    (do
-      (swap! arena disj conn)
+    (swap! arena disj conn)
+    (.send conn (packet "leave" "ok"))
+    (let [names (map #(.data % "user") @arena)]
       (doseq [c (conj @arena conn)]
-        (.send c (packet "leave" (.data c "user")))))))
+        (.send c (packet "arena" names))))))
 
 
 (defn login
   "Login user, i.e., attach user to connection."
-  [conn conns user]
-  (println "login")
-  (if-not (some #(when-let [n (.data % "user")] (= user n)) @connections)
+  [conn user]
+  (if-not (some #(when-let [n (get-data :user %)] (= user n)) @users)
     (do
-      (.data conn "user" user)
+      (set-data :user user conn)
+      (swap! users conj conn)
       (.send conn (packet "login" "ok"))
-      (println @transcript)
+      
+      ;; let the new user see what people have been chatting about
       (doseq [line (reverse (take transcript-size @transcript))]
-        (.send conn (packet "say" line))))
-    (.send conn (packet "login" "name already in use"))))
+        (.send conn (packet "say" line)))
+      
+      (let [names (map (partial get-data :user) @users)]
+        (doseq [c @connections]
+          (.send c (packet "users" names)))))
+    
+    (.send conn (packet "error" "name already in use"))))
 
 
 (defn say
   "Broadcast chat message to all who are logged in"
-  [conn conns msg]
-  (println "say")
-  (when-let [user (.data conn "user")]
-    (let [users (filter #(.data % "user") @connections)
-          line (str user ": " msg)]
+  [conn msg]
+  (when-let [user (get-data :user conn)]
+    (let [line (str user ": " msg)]
       (swap! transcript #(conj (take transcript-size %1) %2) line)
-      (doseq [u users]
+      (doseq [u @users]
         (.send u (packet "say" line))))))
 
 
 (defn bad-type
   "Send an error response on unrecognized type."
-  [conn _ _]
+  [conn _]
   (.send conn (packet "error" "Unrecognized type")))
 
 
@@ -88,7 +104,7 @@
                   "leave"  leave
                   "say"    say
                   :else    bad-type)]
-    (handler conn @connections (:data msg))))
+    (handler conn (:data msg))))
 
 
 (defn on-close
@@ -108,7 +124,8 @@
     (.add (StaticFileHandler. "./web"))
     (.add "/websocket"
           (reify org.webbitserver.WebSocketHandler
-            (onOpen [_ conn]  (on-open conn))
+            (onOpen  [_ conn] (on-open conn))
             (onClose [_ conn] (on-close conn))
             (^void onMessage [_ ^WebSocketConnection conn ^String json] (on-message conn json))))
     (.start)))
+
