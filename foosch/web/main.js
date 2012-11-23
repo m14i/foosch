@@ -1,9 +1,10 @@
 require.config({
-    
+
     baseUrl: 'app',
 
     paths: {
         jquery: 'libs/jquery-1.8.2',
+        jquerycookie: 'libs/jquery.cookie',
         jqueryws: 'libs/jquery.websocket-0.0.1'
     },
 
@@ -16,6 +17,10 @@ require.config({
         'jqueryws': {
             deps: ['jquery'],
             exports: 'jQuery.fn.websocket'
+        },
+        'jquerycookie': {
+            deps: ['jquery'],
+            exports: 'jQuery.fn.cookie'
         }
     }
 });

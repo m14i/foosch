@@ -1,5 +1,9 @@
-define(['jquery', 'jqueryws'], function ($) {
-    return {
+define(
+
+   ['jquery', 'jqueryws', 'jquerycookie'],
+
+   function ($) { return {
+
         initialize: function () {
 
             var txtUser = $('#txtUser');
@@ -12,34 +16,36 @@ define(['jquery', 'jqueryws'], function ($) {
 
             var arenaIn = $('#arena .in');
             var arenaOut = $('#arena .out');
-            var chat = $('#chat');
-            var messages = $('#messages');
-            var players = $('#players');
-            var users = $('#users');
-            var loginPnl = $('#login');
-            var site = $('#site');
+
+            var lblPlayers = $('#players');
+            var lblUsers = $('#users');
+
+            var pnlChat = $('#chat');
+            var pnlMessages = $('#messages');
+            var pnlLogin = $('#login');
+            var pnlSite = $('#site');
 
             function stateStart() {
                 btnLogin.show();
                 btnJoin.hide();
                 btnLeave.hide();
                 txtChat.hide();
-                chat.hide();
+                pnlChat.hide();
                 arenaIn.hide();
                 arenaOut.hide();
-                site.hide();
+                pnlSite.hide();
             }
 
-            function stateLoggedIn(user) {
+            function stateLoggedIn() {
                 btnJoin.show();
                 btnLeave.hide();
                 btnLogin.hide();
                 txtChat.show();
-                loginPnl.hide();
-                chat.show();
+                pnlLogin.hide();
+                pnlChat.show();
                 arenaIn.hide();
                 arenaOut.show();
-                site.show();
+                pnlSite.show();
             }
 
             function stateJoined() {
@@ -47,9 +53,26 @@ define(['jquery', 'jqueryws'], function ($) {
                 btnLeave.show();
                 btnJoin.hide();
                 txtChat.show();
-                chat.show();
+                pnlChat.show();
                 arenaIn.show();
                 arenaOut.hide();
+            }
+
+            function autoLogin() {
+               var name = $.cookie('name');
+               if (name) {
+                  login(name);
+               }
+            }
+
+            function login(name) {
+               $.cookie('name', name, {expires:21});
+               ws.send('login', name);
+            }
+
+            function logout() {
+               $.removeCookie('name');
+               window.location.reload();
             }
 
             stateStart();
@@ -60,29 +83,26 @@ define(['jquery', 'jqueryws'], function ($) {
                         alert("error: " + e.data);
                     },
                     login: function (e) {
-                        console.log("login: " + e.data);
                         $('h1').text(e.data + " @ foosch");
-                        stateLoggedIn(e.data);
+                        stateLoggedIn();
                     },
                     join: function (e) {
-                        console.log("join: " + e.data);
                         stateJoined();
                     },
                     play: function (e) {
                         alert("Time to play " + e.data.join(" ") + "!");
                     },
                     say: function (e) {
-                        messages.prepend(e.data + "\n");
+                        pnlMessages.prepend(e.data + "\n");
                     },
                     leave: function (e) {
-                        console.log("leave: " + e.data);
                         stateLoggedIn();
                     },
                     arena: function (e) {
-                        players.text(e.data.join(" | "));
+                        lblPlayers.text(e.data.join(" | "));
                     },
                     users: function (e) {
-                       users.text(e.data.join(" | "));
+                       lblUsers.text(e.data.join(" | "));
                     }
                 }
             });
@@ -96,18 +116,16 @@ define(['jquery', 'jqueryws'], function ($) {
             });
 
             btnLogout.bind('click', function (e) {
-               window.location.reload();
+                logout();
             });
 
-            function login() {
-                ws.send('login', txtUser.val());
-            }
-
-            btnLogin.bind('click', login);
+            btnLogin.bind('click', function(e){
+                login(txtUser.val());
+            });
 
             txtUser.bind('keypress', function(e) {
                 if (e.keyCode == 13) {
-                    login();
+                    login(txtUser.val());
                 }
             });
 
@@ -117,6 +135,8 @@ define(['jquery', 'jqueryws'], function ($) {
                     txtChat.val("");
                 }
             });
+
+            setTimeout(autoLogin, 100);
         }
     }
 });

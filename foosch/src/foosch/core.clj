@@ -13,6 +13,8 @@
 (def transcript (atom '()))
 (def transcript-size 10)
 
+(def time-formatter (SimpleDateFormat. "HH:mm:ss"))
+
 
 (defn packet
   [type data]
@@ -84,9 +86,7 @@
 
 (defn timestamp
   []
-  (let [ts (-> (Calendar/getInstance) .getTime)
-        formatter (SimpleDateFormat. "HH:mm:ss")]
-    (.format formatter ts)))
+  (->> (Calendar/getInstance) .getTime (.format time-formatter)))
 
 
 (defn say
