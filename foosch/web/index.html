@@ -1,15 +1,83 @@
 <html>
 <head>
   <script data-main="main.js" src="r.js"></script>
+  <style type="text/css">
+
+    body {
+       font-family: Verdana,sans-serif;
+       color: white;
+       background: #444;
+       font-size: 13px;
+       text-shadow: 2px 2px 2px #000000;
+    }
+
+    pre {
+       white-space: pre-line;
+       font-family: "Source Code Pro", "Courier New", monospace;
+       font-weight: lighter;
+       line-height: 18px;
+    }
+
+    h1 {
+       margin: 0;
+       font-weight: normal;
+       font-size: 20px;
+    }
+
+    section {
+       margin-top: 5px;
+       margin-bottom: 5px;
+    }
+
+    .action {
+       color: #8AD6FF;
+       cursor: pointer;
+    }
+
+    #players,
+    #users {
+       color: #ccc;
+    }
+
+    #login,
+    #arena,
+    #chat{
+      width:100%;
+    }
+
+    #txtChat {
+      width:100%;
+    }
+
+  </style>
 </head>
 <body>
-    <h1>FOOSCH</h1>
-    <input id="txtUser" type="text"/>
-    <button id="btnLogin">login</button>
-    <button id="btnJoin">join</button>
-    <button id="btnLeave">leave</button>
-    <pre id="content"></pre>
-    <input id="txtChat" type="text"/>
-    <pre id="chat"></pre>
+    <h1>foosch</h1>
+    <section id="login">
+      <label for="txtUser">name</label>
+      <input id="txtUser" type="text"/>
+      <button id="btnLogin">login</button>
+    </section>
+
+    <section id="site">
+
+       <span id="btnLogout" class="action" title="Log out of foosch">&larr; foosch</span>
+       <span id="users"></span>
+
+    </section>
+
+    <section id="arena">
+
+        <span id="btnJoin" class="out action" title="Join the arena to play some foos">&rarr; arena</span>
+        <span id="btnLeave" class="in action" title="Leave the arena">&larr; arena</span>
+        <span id="players"></span>
+
+    </section>
+
+    <section id="chat">
+       <input id="txtChat" placeholder="say something..." type="text"/>
+      <pre id="messages"></pre>
+    </section>
+
 </body>
 </html>

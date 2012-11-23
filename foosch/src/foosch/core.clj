@@ -1,7 +1,9 @@
 (ns foosch.core
   (:require [clojure.data.json :as json])
   (:import [org.webbitserver WebServer WebServers WebSocketHandler WebSocketConnection]
-           [org.webbitserver.handler StaticFileHandler]))
+           [org.webbitserver.handler StaticFileHandler]
+           [java.util Calendar Locale]
+           [java.text DateFormat SimpleDateFormat]))
 
 
 (def connections (atom #{}))
@@ -25,6 +27,7 @@
 (defn get-data
   [key conn]
   (.data conn (name key)))
+
 
 (defn set-data
   [key val conn]
@@ -66,24 +69,32 @@
     (do
       (set-data :user user conn)
       (swap! users conj conn)
-      (.send conn (packet "login" "ok"))
-      
+      (.send conn (packet "login" user))
+
       ;; let the new user see what people have been chatting about
       (doseq [line (reverse (take transcript-size @transcript))]
         (.send conn (packet "say" line)))
-      
+
       (let [names (map (partial get-data :user) @users)]
         (doseq [c @connections]
           (.send c (packet "users" names)))))
-    
+
     (.send conn (packet "error" "name already in use"))))
+
+
+(defn timestamp
+  []
+  (let [ts (-> (Calendar/getInstance) .getTime)
+        formatter (SimpleDateFormat. "HH:mm:ss")]
+    (.format formatter ts)))
 
 
 (defn say
   "Broadcast chat message to all who are logged in"
   [conn msg]
   (when-let [user (get-data :user conn)]
-    (let [line (str user ": " msg)]
+    (let [time (timestamp)
+          line (str time " " user ": " msg)]
       (swap! transcript #(conj (take transcript-size %1) %2) line)
       (doseq [u @users]
         (.send u (packet "say" line))))))
@@ -110,6 +121,7 @@
 (defn on-close
   [conn]
   (swap! arena disj conn)
+  (swap! users disj conn)
   (swap! connections disj conn))
 
 
@@ -128,4 +140,5 @@
             (onClose [_ conn] (on-close conn))
             (^void onMessage [_ ^WebSocketConnection conn ^String json] (on-message conn json))))
     (.start)))
+
 
